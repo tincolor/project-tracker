@@ -250,12 +250,17 @@ function buildTimeline(groups, items) {
 
   const allItems = [...buildDayBackgroundItems(), ...items];
 
-  // Fast path — update existing DataSets in place so vis-timeline reacts reactively
+  // Fast path — surgical DataSet updates (never clear(), which causes a blank intermediate state)
   if (state.tlInstance && timelineGroupsData && timelineItemsData) {
-    timelineGroupsData.clear();
-    timelineGroupsData.add(groups);
-    timelineItemsData.clear();
-    timelineItemsData.add(allItems);
+    const keepGroupIds = new Set(groups.map(g => String(g.id)));
+    const removeGroupIds = timelineGroupsData.getIds().filter(id => !keepGroupIds.has(String(id)));
+    if (removeGroupIds.length > 0) timelineGroupsData.remove(removeGroupIds);
+    timelineGroupsData.update(groups);
+
+    const keepItemIds = new Set(allItems.map(it => String(it.id)));
+    const removeItemIds = timelineItemsData.getIds().filter(id => !keepItemIds.has(String(id)));
+    if (removeItemIds.length > 0) timelineItemsData.remove(removeItemIds);
+    timelineItemsData.update(allItems);
     return;
   }
 
