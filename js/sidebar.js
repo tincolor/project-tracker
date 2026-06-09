@@ -27,8 +27,10 @@ export function renderPresets() {
   const presetChips = state.presets.length > 0
     ? state.presets.map((p, i) => {
         const isActive = [...state.filter.calendars].sort().join() === [...p.calIds].sort().join();
+        const showUpdate = hasSelection && !isActive;
         return `<div class="preset-chip ${isActive ? 'preset-active' : ''}" data-idx="${i}">
           <span class="preset-name">${p.name}</span>
+          ${showUpdate ? `<span class="preset-update" data-idx="${i}" title="Update with current selection">↺</span>` : ''}
           <span class="preset-delete" data-idx="${i}" title="Delete">×</span>
         </div>`;
       }).join('')
@@ -49,12 +51,27 @@ export function renderPresets() {
 
   list.querySelectorAll('.preset-chip').forEach(chip => {
     chip.querySelector('.preset-name').addEventListener('click', () => {
-      const p = state.presets[Number(chip.dataset.idx)];
+      const idx = Number(chip.dataset.idx);
+      const p = state.presets[idx];
       if (!p) return;
-      state.filter.calendars = new Set(p.calIds.filter(id => state.calendars.some(c => c.id === id)));
+      const isActive = [...state.filter.calendars].sort().join() === [...p.calIds].sort().join();
+      if (isActive) {
+        state.filter.calendars = new Set();
+      } else {
+        state.filter.calendars = new Set(p.calIds.filter(id => state.calendars.some(c => c.id === id)));
+      }
       renderCalendarList();
       renderPresets();
       filterChanged();
+    });
+
+    chip.querySelector('.preset-update')?.addEventListener('click', e => {
+      e.stopPropagation();
+      const idx = Number(chip.dataset.idx);
+      if (!state.presets[idx]) return;
+      state.presets[idx] = { ...state.presets[idx], calIds: [...state.filter.calendars] };
+      savePresetsToStorage();
+      renderPresets();
     });
   });
 

@@ -1005,7 +1005,9 @@ body {
 .preset-chip.preset-active { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight: 500; }
 
 .preset-name { flex: 1; cursor: pointer; }
-.preset-delete { font-size: 16px; line-height: 1; opacity: .4; cursor: pointer; padding-left: 8px; flex-shrink: 0; }
+.preset-update { font-size: 13px; line-height: 1; opacity: .45; cursor: pointer; padding-left: 6px; flex-shrink: 0; }
+.preset-update:hover { opacity: 1; color: var(--accent); }
+.preset-delete { font-size: 16px; line-height: 1; opacity: .4; cursor: pointer; padding-left: 4px; flex-shrink: 0; }
 .preset-delete:hover { opacity: 1; color: #c00; }
 
 /* ── Table view ───────────────────────────────────────────────────────────── */
