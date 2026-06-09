@@ -241,6 +241,7 @@ function buildTimeline(groups, items) {
     pendingRafId = null;
   }
   if (state.tlInstance) {
+    state.tlWindow = state.tlInstance.getWindow();
     state.tlInstance.destroy();
     state.tlInstance = null;
   }
@@ -260,13 +261,14 @@ function buildTimeline(groups, items) {
   const now  = new Date();
   const mid  = now.getTime();
   const half = state.timelineZoom / 2;
+  const win  = state.tlWindow;
 
   // Defer init until after the container has real dimensions
   pendingRafId = requestAnimationFrame(() => {
     pendingRafId = null;
     state.tlInstance = new vis.Timeline(container, di, ds, {
-      start:           new Date(mid - half),
-      end:             new Date(mid + half),
+      start:           win ? win.start : new Date(mid - half),
+      end:             win ? win.end   : new Date(mid + half),
       moveable:        true,
       zoomable:        false,
       verticalScroll:  true,

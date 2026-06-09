@@ -17,6 +17,7 @@ export const state = {
   tokenClient:  null,
   fcInstance:   null,
   tlInstance:   null,
+  tlWindow:     null,
 };
 
 export const el = {

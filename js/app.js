@@ -92,22 +92,6 @@ function initCalendars() {
     isPublic: true,
   }));
   
-  state.calendars.push({
-    id: 'mock-project-calendar-b',
-    name: 'Sample Calendar B',
-    color: '#8b5cf6',
-    enabled: true,
-    isPublic: true,
-  });
-
-  state.calendars.push({
-    id: 'mock-project-calendar-a',
-    name: 'Sample Calendar A',
-    color: '#10b981',
-    enabled: true,
-    isPublic: true,
-  });
-
   state.filter.calendars = new Set();
   renderCalendarList();
 }
