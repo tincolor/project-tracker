@@ -3,7 +3,8 @@ import { escapeHtml, shortDisplayName } from '../utils.js';
 import { filteredEvents } from '../events.js';
 import { showHoverTooltip, hideHoverTooltip, showPinnedTooltip } from '../tooltip.js';
 
-let timelineItemsData = null;
+let timelineItemsData  = null;
+let timelineGroupsData = null;
 
 // ── Day boundary helpers ───────────────────────────────────────────────────────
 function dayStart(date) {
@@ -235,30 +236,40 @@ function emptyTimelineMessage() {
 function buildTimeline(groups, items) {
   const container = el.tlContainer();
 
-  if (state.tlInstance) {
-    state.tlWindow = state.tlInstance.getWindow();
-    state.tlInstance.destroy();
-    state.tlInstance = null;
-  }
-  timelineItemsData = null;
-
   if (items.length === 0) {
+    if (state.tlInstance) {
+      state.tlInstance.destroy();
+      state.tlInstance  = null;
+      timelineItemsData  = null;
+      timelineGroupsData = null;
+    }
     const msg = emptyTimelineMessage();
     container.innerHTML = `<div class="empty-state"><p>${msg}</p></div>`;
     return;
   }
 
-  container.innerHTML = '';
+  const allItems = [...buildDayBackgroundItems(), ...items];
 
-  const ds   = new vis.DataSet(groups);
-  const di   = new vis.DataSet([...buildDayBackgroundItems(), ...items]);
-  timelineItemsData = di;
+  // Fast path — update existing DataSets in place so vis-timeline reacts reactively
+  if (state.tlInstance && timelineGroupsData && timelineItemsData) {
+    timelineGroupsData.clear();
+    timelineGroupsData.add(groups);
+    timelineItemsData.clear();
+    timelineItemsData.add(allItems);
+    return;
+  }
+
+  // Initial creation (or after being destroyed due to empty state)
+  container.innerHTML = '';
   const now  = new Date();
   const mid  = now.getTime();
   const half = state.timelineZoom / 2;
   const win  = state.tlWindow;
 
-  state.tlInstance = new vis.Timeline(container, di, ds, {
+  timelineGroupsData = new vis.DataSet(groups);
+  timelineItemsData  = new vis.DataSet(allItems);
+
+  state.tlInstance = new vis.Timeline(container, timelineItemsData, timelineGroupsData, {
     start:           win ? win.start : new Date(mid - half),
     end:             win ? win.end   : new Date(mid + half),
     moveable:        true,
@@ -275,8 +286,12 @@ function buildTimeline(groups, items) {
     tooltip:         { followMouse: false, overflowMethod: 'cap' },
   });
 
+  state.tlInstance.on('rangechanged', () => {
+    state.tlWindow = state.tlInstance.getWindow();
+  });
+
   state.tlInstance.on('itemover', props => {
-    const itemData = di.get(props.item);
+    const itemData = timelineItemsData?.get(props.item);
     if (!itemData?._ev) return;
     const itemEl = props.event.target.closest('.vis-item') || props.event.target;
     showHoverTooltip(itemData._ev, itemEl);
@@ -288,7 +303,7 @@ function buildTimeline(groups, items) {
       if (props.time) highlightGanttDate(props.time);
       return;
     }
-    const itemData = di.get(props.item);
+    const itemData = timelineItemsData?.get(props.item);
     if (!itemData?._ev) {
       if (itemData?.type === 'background' && props.time) highlightGanttDate(props.time);
       return;

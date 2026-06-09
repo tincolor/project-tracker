@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calendar Dashboard</title>
+  <title>Tom's Awesome Project Tracker</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
 
   <!-- Styles -->
   <link rel="stylesheet" href="style.css">
@@ -19,9 +24,20 @@
 </head>
 <body>
 
+  <!-- ── Landing screen ───────────────────────────────────────────────────── -->
+  <div id="landing">
+    <h1 class="landing-title">Tom's Awesome<br>Project Tracker</h1>
+    <button id="landing-signin-btn">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+        <path d="M12 2a5 5 0 100 10A5 5 0 0012 2zm0 12c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/>
+      </svg>
+      Sign in with Google
+    </button>
+  </div>
+
   <!-- ── Header ─────────────────────────────────────────────────────────── -->
   <header id="header">
-    <h1>Calendar <span>Dashboard</span></h1>
+    <h1>Tom's <span>Project Tracker</span></h1>
 
     <div id="view-toggle">
       <button data-view="month" class="active">Month</button>

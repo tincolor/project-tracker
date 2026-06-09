@@ -1,17 +1,21 @@
 import { state } from './state.js';
 import { shortDisplayName, initials, avatarColor } from './utils.js';
 
-const PRESETS_KEY  = 'cdash-presets';
+const presetsKey    = () => state.auth?.email ? `cdash-presets-${state.auth.email}` : null;
 const filterChanged = () => document.dispatchEvent(new CustomEvent('cdash:filter-changed'));
 
 // ── Presets ───────────────────────────────────────────────────────────────────
 export function loadPresets() {
-  try { state.presets = JSON.parse(localStorage.getItem(PRESETS_KEY)) || []; }
+  const key = presetsKey();
+  if (!key) { state.presets = []; return; }
+  try { state.presets = JSON.parse(localStorage.getItem(key)) || []; }
   catch { state.presets = []; }
 }
 
 export function savePresetsToStorage() {
-  localStorage.setItem(PRESETS_KEY, JSON.stringify(state.presets));
+  const key = presetsKey();
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify(state.presets));
 }
 
 export function renderPresets() {

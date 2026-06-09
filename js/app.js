@@ -14,6 +14,8 @@ import {
 
 let refreshInFlight = false;
 
+const AUTH_SESSION_KEY = 'cdash-session';
+
 // ── Script loader (for gapi / gsi) ────────────────────────────────────────────
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -38,6 +40,19 @@ function switchView(view, force = false) {
   if (view === 'gantt') { show('view-gantt'); show('gantt-groupby-section'); renderGantt(); }
   if (view === 'list')  { show('view-list');  renderList(); }
   if (view === 'table') { show('view-table'); renderTable(); }
+}
+
+// ── Landing screen ────────────────────────────────────────────────────────────
+function showLanding() {
+  document.getElementById('landing')?.classList.remove('hidden');
+  document.getElementById('header').style.display  = 'none';
+  document.getElementById('body').style.display    = 'none';
+}
+
+function hideLanding() {
+  document.getElementById('landing')?.classList.add('hidden');
+  document.getElementById('header').style.display  = '';
+  document.getElementById('body').style.display    = '';
 }
 
 function renderAll() {
@@ -135,12 +150,37 @@ function updateAuthBtn() {
   if (!btn) return;
   const icon = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 100 10A5 5 0 0012 2zm0 12c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/></svg>`;
   if (state.auth.signedIn) {
+    const label = state.auth.email ? state.auth.email.split('@')[0] : 'Signed in';
     btn.className = 'signed-in';
-    btn.innerHTML = `${icon} Signed in`;
+    btn.innerHTML = `${icon} ${label}`;
   } else {
     btn.className = '';
     btn.innerHTML = `${icon} Sign in with Google`;
   }
+}
+
+async function handleAuthResponse(resp) {
+  if (resp.error) {
+    // Silent re-auth failed — leave session key intact so we try again next load
+    return;
+  }
+  state.auth.signedIn = true;
+
+  // Get email: use cached value from localStorage, or fetch from primary calendar
+  let email = localStorage.getItem(AUTH_SESSION_KEY);
+  if (!email) {
+    try {
+      const primary = await gapi.client.calendar.calendarList.get({ calendarId: 'primary' });
+      email = primary.result.id;
+      localStorage.setItem(AUTH_SESSION_KEY, email);
+    } catch (e) { /* continue without email */ }
+  }
+  state.auth.email = email;
+
+  hideLanding();
+  updateAuthBtn();
+  loadPresets();
+  await refreshCalendarData({ showSpinner: true });
 }
 
 function setupTokenClient() {
@@ -148,17 +188,21 @@ function setupTokenClient() {
   state.tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CONFIG.CLIENT_ID,
     scope:     'https://www.googleapis.com/auth/calendar.readonly',
-    callback:  async resp => {
-      if (resp.error) return;
-      state.auth.signedIn = true;
-      updateAuthBtn();
-      await refreshCalendarData({ showSpinner: true });
-    },
+    callback:  handleAuthResponse,
   });
 }
 
 // ── Event listeners ───────────────────────────────────────────────────────────
 function setupEventListeners() {
+  // Landing sign-in button mirrors the header auth button
+  document.getElementById('landing-signin-btn')?.addEventListener('click', () => {
+    if (!state.tokenClient) {
+      alert('CLIENT_ID is not set in config.js. See README.md for setup instructions.');
+      return;
+    }
+    state.tokenClient.requestAccessToken();
+  });
+
   // Auth button
   el.authBtn()?.addEventListener('click', () => {
     if (!state.tokenClient) {
@@ -168,14 +212,17 @@ function setupEventListeners() {
     if (state.auth.signedIn) {
       google.accounts.oauth2.revoke(gapi.client.getToken()?.access_token, () => {
         gapi.client.setToken(null);
-        state.auth.signedIn = false;
-        state.calendars     = state.calendars.filter(c => c.isPublic);
+        state.auth.signedIn    = false;
+        state.auth.email       = null;
+        localStorage.removeItem(AUTH_SESSION_KEY);
+        state.calendars        = state.calendars.filter(c => c.isPublic);
         state.filter.calendars = new Set();
-        state.events        = state.events.filter(ev => state.calendars.some(c => c.id === ev.calendarId));
-        state.attendees     = [];
+        state.events           = state.events.filter(ev => state.calendars.some(c => c.id === ev.calendarId));
+        state.attendees        = [];
         state.filter.attendees.clear();
         updateAuthBtn();
-        renderAll();
+        loadPresets();
+        showLanding();
       });
     } else {
       state.tokenClient.requestAccessToken();
@@ -255,6 +302,7 @@ async function init() {
 
   setupTokenClient();
   setupEventListeners();
+  showLanding();
   loadPresets();
   initCalendars();
   setLoading(true);
@@ -263,6 +311,12 @@ async function init() {
   renderAll();
   updateDeconflictBadge();
   updateRefreshBtn();
+
+  // Attempt silent re-auth if the user was previously signed in
+  const savedEmail = localStorage.getItem(AUTH_SESSION_KEY);
+  if (savedEmail && state.tokenClient) {
+    state.tokenClient.requestAccessToken({ prompt: 'none', login_hint: savedEmail });
+  }
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────

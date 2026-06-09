@@ -13,7 +13,7 @@ export const state = {
   calSearch:    '',
   timelineZoom: 2592000000,
   ganttHighlightedDate: null,
-  auth:         { signedIn: false },
+  auth:         { signedIn: false, email: null },
   tokenClient:  null,
   fcInstance:   null,
   tlInstance:   null,
