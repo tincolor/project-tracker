@@ -1,6 +1,6 @@
 import { state, el } from '../state.js';
 import { filteredEvents } from '../events.js';
-import { showTooltip, hideTooltip } from '../tooltip.js';
+import { showHoverTooltip, hideHoverTooltip, showPinnedTooltip } from '../tooltip.js';
 
 export function renderMonth() {
   const events = filteredEvents().map(ev => ({
@@ -27,10 +27,20 @@ export function renderMonth() {
       center: 'title',
       right:  'dayGridMonth,timeGridWeek,listMonth',
     },
-    height:          '100%',
+    height: '100%',
     events,
-    eventClick:      ({ event, jsEvent }) => showTooltip(event.extendedProps, jsEvent),
-    eventMouseLeave: () => hideTooltip(),
+    // Hover: show/hide transient tooltip
+    eventMouseEnter: ({ event, el }) => showHoverTooltip(event.extendedProps, el),
+    eventMouseLeave: () => hideHoverTooltip(),
+    // Click: pin tooltip — stop propagation so document click doesn't immediately dismiss it
+    eventClick: ({ event, el, jsEvent }) => {
+      jsEvent.stopPropagation();
+      showPinnedTooltip(event.extendedProps, el);
+    },
   });
   state.fcInstance.render();
+}
+
+export function navigateMonthToDate(date) {
+  if (state.fcInstance) state.fcInstance.gotoDate(date);
 }

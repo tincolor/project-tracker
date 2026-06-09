@@ -29,6 +29,14 @@
       <button data-view="list">List</button>
     </div>
 
+    <button id="deconflict-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="12" height="12" rx="1.5"/>
+        <rect x="9" y="8" width="12" height="12" rx="1.5"/>
+      </svg>
+      Deconflict
+    </button>
+
     <button id="auth-btn">
       <svg viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 2a5 5 0 100 10A5 5 0 0012 2zm0 12c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/>
@@ -116,8 +124,19 @@
     </main>
   </div>
 
-  <!-- Tooltip -->
-  <div id="event-tooltip"></div>
+  <!-- Deconflict slide-out panel -->
+  <aside id="deconflict-panel">
+    <div id="deconflict-header">
+      <span>Conflicts</span>
+      <button id="deconflict-close" aria-label="Close">×</button>
+    </div>
+    <div id="deconflict-body"></div>
+  </aside>
+
+  <!-- Hover tooltip (disappears on mouse-leave) -->
+  <div id="tooltip-hover"></div>
+  <!-- Pinned tooltip (stays until dismissed) -->
+  <div id="tooltip-pinned"></div>
 
   <!-- Entry point — gapi and gsi are loaded dynamically inside the module -->
   <script type="module" src="js/app.js"></script>

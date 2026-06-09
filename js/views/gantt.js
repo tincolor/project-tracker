@@ -1,7 +1,7 @@
 import { state, el } from '../state.js';
 import { shortDisplayName } from '../utils.js';
 import { filteredEvents } from '../events.js';
-import { buildTooltipHTML } from '../tooltip.js';
+import { showHoverTooltip, hideHoverTooltip, showPinnedTooltip } from '../tooltip.js';
 
 // ── Day boundary helpers ───────────────────────────────────────────────────────
 function dayStart(date) {
@@ -44,11 +44,10 @@ function buildTimelineItem(id, ev, groupId) {
   return {
     id,
     group:   groupId,
-    content: `<span title="${ev.title}">${ev.title}</span>`,
+    content: `<span>${ev.title}</span>`,
     start,
     end,
     style:   `background:${ev.calColor}cc; border-color:${ev.calColor}; color:#fff;`,
-    title:   buildTooltipHTML(ev),
     type:    'range',
     _ev:     ev,
   };
@@ -90,7 +89,27 @@ function buildTimeline(groups, items) {
       stack:           true,
       showCurrentTime: true,
       groupOrder:      'content',
-      tooltip:         { followMouse: true, overflowMethod: 'cap' },
+      // Disable built-in tooltip — we use our own
+      tooltip:         { followMouse: false, overflowMethod: 'cap' },
+    });
+
+    // Hover: show/hide transient tooltip
+    state.tlInstance.on('itemover', props => {
+      const itemData = di.get(props.item);
+      if (!itemData?._ev) return;
+      const itemEl = props.event.target.closest('.vis-item') || props.event.target;
+      showHoverTooltip(itemData._ev, itemEl);
+    });
+    state.tlInstance.on('itemout', () => hideHoverTooltip());
+
+    // Click: pin tooltip
+    state.tlInstance.on('click', props => {
+      if (!props.item) return;
+      const itemData = di.get(props.item);
+      if (!itemData?._ev) return;
+      const itemEl = props.event.target.closest('.vis-item') || props.event.target;
+      props.event.stopPropagation();
+      showPinnedTooltip(itemData._ev, itemEl);
     });
 
     setupTimelineScroll(container);
@@ -176,6 +195,21 @@ function renderGanttByCalendar(events) {
   }));
   const items = events.map((ev, i) => buildTimelineItem(i, ev, ev.calendarId)).filter(Boolean);
   buildTimeline(groups, items);
+}
+
+export function navigateGanttToDate(date) {
+  if (!state.tlInstance) return;
+  const zoomMs = 259200000; // 3 days
+  state.timelineZoom = zoomMs;
+  const start = dayStart(date).getTime();
+  state.tlInstance.setWindow(
+    new Date(start),
+    new Date(start + zoomMs),
+    { animation: { duration: 300, easingFunction: 'easeInOutQuad' } }
+  );
+  document.querySelectorAll('#zoom-toggle button').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.ms) === zoomMs);
+  });
 }
 
 export function renderGantt() {

@@ -27,7 +27,10 @@ export const el = {
   tlContainer:   () => document.getElementById('timeline-container'),
   listContainer: () => document.getElementById('list-container'),
   loading:       () => document.getElementById('loading-overlay'),
-  tooltip:       () => document.getElementById('event-tooltip'),
+  tooltipHover:      () => document.getElementById('tooltip-hover'),
+  tooltipPinned:     () => document.getElementById('tooltip-pinned'),
+  deconflictPanel:   () => document.getElementById('deconflict-panel'),
+  deconflictBtn:     () => document.getElementById('deconflict-btn'),
   viewBtns:      () => document.querySelectorAll('#view-toggle button'),
   groupBtns:     () => document.querySelectorAll('.group-toggle button'),
 };

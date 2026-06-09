@@ -1,7 +1,8 @@
 import { CONFIG } from '../config.js';
 import { state, el, show, hide, setLoading, nextColor } from './state.js';
 import { loadAllEvents, fetchCalendarEvents, extractAttendees } from './events.js';
-import { hideTooltip } from './tooltip.js';
+import { hideHoverTooltip, hidePinnedTooltip } from './tooltip.js';
+import { openDeconflictPanel, closeDeconflictPanel, refreshDeconflictPanel, updateDeconflictBadge } from './deconflict.js';
 import { renderMonth } from './views/month.js';
 import { renderGantt } from './views/gantt.js';
 import { renderList } from './views/list.js';
@@ -151,15 +152,23 @@ function setupEventListeners() {
     });
   });
 
-  // Hide tooltip on outside click
+  // Deconflict panel
+  document.getElementById('deconflict-btn')?.addEventListener('click', openDeconflictPanel);
+  document.getElementById('deconflict-close')?.addEventListener('click', closeDeconflictPanel);
+
+  // Clicking outside an event element or the pinned tooltip dismisses the pin
   document.addEventListener('click', e => {
-    if (!el.tooltip().contains(e.target)) hideTooltip();
+    const onEvent = e.target.closest('.fc-event, .vis-item');
+    const onPin   = el.tooltipPinned().contains(e.target);
+    if (!onEvent && !onPin) hidePinnedTooltip();
+    // Hover tooltip is always hidden on mouse-leave; no click logic needed
   });
 
-  // Sidebar filter changes → refresh view + presets
+  // Sidebar filter changes → refresh view + presets + deconflict
   document.addEventListener('cdash:filter-changed', () => {
     renderPresets();
     switchView(state.view, true);
+    refreshDeconflictPanel();
   });
 }
 
@@ -207,6 +216,7 @@ async function init() {
   await loadAllEvents();
   setLoading(false);
   renderAll();
+  updateDeconflictBadge();
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────

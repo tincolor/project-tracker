@@ -2,6 +2,14 @@ import { el } from '../state.js';
 import { formatDateRange, shortDisplayName } from '../utils.js';
 import { filteredEvents } from '../events.js';
 
+export function scrollListToEvent(ev) {
+  const card = document.querySelector(`#list-container [data-event-id="${CSS.escape(ev.id)}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.add('highlight');
+  setTimeout(() => card.classList.remove('highlight'), 1500);
+}
+
 export function renderList() {
   const events = filteredEvents()
     .filter(ev => ev.start)
@@ -23,7 +31,7 @@ export function renderList() {
       .map(a => `<span class="attendee-pill">${shortDisplayName(a.displayName, a.email)}</span>`)
       .join('');
     return `
-      <div class="event-card" style="border-left-color:${ev.calColor}">
+      <div class="event-card" data-event-id="${ev.id}" style="border-left-color:${ev.calColor}">
         <div class="event-date">
           <div class="month">${month}</div>
           <div class="day">${day}</div>
