@@ -25,7 +25,7 @@ export function renderMonth() {
     headerToolbar: {
       left:   'prev,next today',
       center: 'title',
-      right:  'dayGridMonth,timeGridWeek,listMonth',
+      right:  '',
     },
     height: '100%',
     events,
