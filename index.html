@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar Dashboard</title>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- FullCalendar -->
+  <link    rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+  <script  src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
+  <!-- vis-timeline (Gantt) -->
+  <link    rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/7.7.3/vis-timeline-graph2d.min.css">
+  <script  src="https://cdnjs.cloudflare.com/ajax/libs/vis-timeline/7.7.3/vis-timeline-graph2d.min.js"></script>
+
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header id="header">
+    <h1>Calendar <span>Dashboard</span></h1>
+
+    <div id="view-toggle">
+      <button data-view="month" class="active">Month</button>
+      <button data-view="gantt">Gantt</button>
+      <button data-view="list">List</button>
+    </div>
+
+    <button id="auth-btn">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2a5 5 0 100 10A5 5 0 0012 2zm0 12c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/>
+      </svg>
+      Sign in with Google
+    </button>
+  </header>
+
+  <!-- ── Body ───────────────────────────────────────────────────────────── -->
+  <div id="body">
+
+    <!-- Sidebar -->
+    <aside id="sidebar">
+
+      <!-- Calendars -->
+      <div class="sidebar-section">
+        <div class="sidebar-label">Calendars</div>
+        <div id="cal-list"></div>
+      </div>
+
+      <!-- Presets -->
+      <div class="sidebar-section">
+        <div class="sidebar-label">Presets</div>
+        <div id="preset-list"></div>
+      </div>
+
+      <!-- People / Attendees -->
+      <div class="sidebar-section">
+        <div class="sidebar-label">People</div>
+        <div id="person-list">
+          <p style="font-size:12px;color:var(--text-sub);line-height:1.5;">
+            Attendee filters appear here once you sign in and load calendars with assigned events.
+          </p>
+        </div>
+      </div>
+
+      <!-- Gantt group-by -->
+      <div class="sidebar-section" id="gantt-groupby-section" style="display:none;">
+        <div class="sidebar-label">Gantt: group by</div>
+        <div class="group-toggle">
+          <button data-group="calendar" class="active">Calendar</button>
+          <button data-group="person">Person</button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Main content -->
+    <main id="main">
+
+      <!-- Loading overlay -->
+      <div id="loading-overlay" style="display:none;">
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Month view -->
+      <div id="view-month">
+        <div id="fc-container"></div>
+      </div>
+
+      <!-- Gantt view -->
+      <div id="view-gantt" style="display:none;">
+        <div id="timeline-toolbar">
+          <span class="tl-label">Zoom</span>
+          <div id="zoom-toggle">
+            <button data-ms="15552000000">6 mo</button>
+            <button data-ms="7776000000">3 mo</button>
+            <button data-ms="5184000000">2 mo</button>
+            <button data-ms="2592000000" class="active">1 mo</button>
+            <button data-ms="1814400000">3 wk</button>
+            <button data-ms="1209600000">2 wk</button>
+            <button data-ms="604800000">1 wk</button>
+            <button data-ms="259200000">3 d</button>
+            <button data-ms="86400000">1 d</button>
+          </div>
+        </div>
+        <div id="timeline-container"></div>
+      </div>
+
+      <!-- List view -->
+      <div id="view-list" style="display:none;">
+        <div id="list-container"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Tooltip -->
+  <div id="event-tooltip"></div>
+
+  <!-- Entry point — gapi and gsi are loaded dynamically inside the module -->
+  <script type="module" src="js/app.js"></script>
+
+</body>
+</html>
