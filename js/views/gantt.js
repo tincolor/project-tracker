@@ -4,7 +4,6 @@ import { filteredEvents } from '../events.js';
 import { showHoverTooltip, hideHoverTooltip, showPinnedTooltip } from '../tooltip.js';
 
 let timelineItemsData = null;
-let pendingRafId      = null;
 
 // ── Day boundary helpers ───────────────────────────────────────────────────────
 function dayStart(date) {
@@ -236,10 +235,6 @@ function emptyTimelineMessage() {
 function buildTimeline(groups, items) {
   const container = el.tlContainer();
 
-  if (pendingRafId !== null) {
-    cancelAnimationFrame(pendingRafId);
-    pendingRafId = null;
-  }
   if (state.tlInstance) {
     state.tlWindow = state.tlInstance.getWindow();
     state.tlInstance.destroy();
@@ -263,56 +258,48 @@ function buildTimeline(groups, items) {
   const half = state.timelineZoom / 2;
   const win  = state.tlWindow;
 
-  // Defer init until after the container has real dimensions
-  pendingRafId = requestAnimationFrame(() => {
-    pendingRafId = null;
-    state.tlInstance = new vis.Timeline(container, di, ds, {
-      start:           win ? win.start : new Date(mid - half),
-      end:             win ? win.end   : new Date(mid + half),
-      moveable:        true,
-      zoomable:        false,
-      verticalScroll:  true,
-      maxHeight:       container.clientHeight || 600,
-      orientation:     'top',
-      stack:           true,
-      stackSubgroups:  true,
-      showCurrentTime: false,
-      groupOrder:      'content',
-      order:           (a, b) => (a._stackOrder ?? 0) - (b._stackOrder ?? 0),
-      // Always show day-level axis — prevents hourly breakdown at 3-day / 1-day zoom
-      timeAxis:        { scale: 'day', step: 1 },
-      // Disable built-in tooltip — we use our own
-      tooltip:         { followMouse: false, overflowMethod: 'cap' },
-    });
-
-    // Hover: show/hide transient tooltip
-    state.tlInstance.on('itemover', props => {
-      const itemData = di.get(props.item);
-      if (!itemData?._ev) return;
-      const itemEl = props.event.target.closest('.vis-item') || props.event.target;
-      showHoverTooltip(itemData._ev, itemEl);
-    });
-    state.tlInstance.on('itemout', () => hideHoverTooltip());
-
-    // Click: pin tooltip, or highlight the clicked day when clicking empty space
-    state.tlInstance.on('click', props => {
-      if (!props.item) {
-        if (props.time) highlightGanttDate(props.time);
-        return;
-      }
-      const itemData = di.get(props.item);
-      if (!itemData?._ev) {
-        if (itemData?.type === 'background' && props.time) highlightGanttDate(props.time);
-        return;
-      }
-      const itemEl = props.event.target.closest('.vis-item') || props.event.target;
-      props.event.stopPropagation();
-      showPinnedTooltip(itemData._ev, itemEl);
-    });
-
-    setupTimelineScroll(container);
-    setupZoomButtons();
+  state.tlInstance = new vis.Timeline(container, di, ds, {
+    start:           win ? win.start : new Date(mid - half),
+    end:             win ? win.end   : new Date(mid + half),
+    moveable:        true,
+    zoomable:        false,
+    verticalScroll:  true,
+    maxHeight:       container.clientHeight || 600,
+    orientation:     'top',
+    stack:           true,
+    stackSubgroups:  true,
+    showCurrentTime: false,
+    groupOrder:      'content',
+    order:           (a, b) => (a._stackOrder ?? 0) - (b._stackOrder ?? 0),
+    timeAxis:        { scale: 'day', step: 1 },
+    tooltip:         { followMouse: false, overflowMethod: 'cap' },
   });
+
+  state.tlInstance.on('itemover', props => {
+    const itemData = di.get(props.item);
+    if (!itemData?._ev) return;
+    const itemEl = props.event.target.closest('.vis-item') || props.event.target;
+    showHoverTooltip(itemData._ev, itemEl);
+  });
+  state.tlInstance.on('itemout', () => hideHoverTooltip());
+
+  state.tlInstance.on('click', props => {
+    if (!props.item) {
+      if (props.time) highlightGanttDate(props.time);
+      return;
+    }
+    const itemData = di.get(props.item);
+    if (!itemData?._ev) {
+      if (itemData?.type === 'background' && props.time) highlightGanttDate(props.time);
+      return;
+    }
+    const itemEl = props.event.target.closest('.vis-item') || props.event.target;
+    props.event.stopPropagation();
+    showPinnedTooltip(itemData._ev, itemEl);
+  });
+
+  setupTimelineScroll(container);
+  setupZoomButtons();
 }
 
 function highlightGanttDate(date) {

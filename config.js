@@ -18,23 +18,7 @@ export const CONFIG = {
   // These are Google's built-in public calendars — no sign-in required.
   // Users can also add the World Cup ICS feed to their own Google account
   // (from worldcupcalendar.football) and it will appear after they sign in.
-  PUBLIC_CALENDARS: [
-    {
-      id:    'en.usa#holiday@group.v.calendar.google.com',
-      name:  'US Holidays',
-      color: '#4285f4',
-    },
-    {
-      id:    'en.christian#holiday@group.v.calendar.google.com',
-      name:  'Christian Holidays',
-      color: '#34a853',
-    },
-    {
-      id:    'en.jewish#holiday@group.v.calendar.google.com',
-      name:  'Jewish Holidays',
-      color: '#f5a623',
-    },
-  ],
+  PUBLIC_CALENDARS: [],
 
   // ── Your team calendars ────────────────────────────────────────────────────
   // Add the IDs of any shared Google Calendars your team uses.
