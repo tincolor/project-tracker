@@ -12,6 +12,7 @@ export const state = {
   peopleSearch: '',
   calSearch:    '',
   timelineZoom: 2592000000,
+  ganttHighlightedDate: null,
   auth:         { signedIn: false },
   tokenClient:  null,
   fcInstance:   null,
@@ -31,8 +32,10 @@ export const el = {
   tooltipPinned:     () => document.getElementById('tooltip-pinned'),
   deconflictPanel:   () => document.getElementById('deconflict-panel'),
   deconflictBtn:     () => document.getElementById('deconflict-btn'),
+  refreshBtn:        () => document.getElementById('refresh-btn'),
   viewBtns:      () => document.querySelectorAll('#view-toggle button'),
   groupBtns:     () => document.querySelectorAll('.group-toggle button'),
+  layoutBtns:    () => document.querySelectorAll('#layout-toggle button'),
 };
 
 export const show = id => { const e = document.getElementById(id); if (e) e.style.display = ''; };

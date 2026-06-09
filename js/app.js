@@ -2,14 +2,17 @@ import { CONFIG } from '../config.js';
 import { state, el, show, hide, setLoading, nextColor } from './state.js';
 import { loadAllEvents, fetchCalendarEvents, extractAttendees } from './events.js';
 import { hideHoverTooltip, hidePinnedTooltip } from './tooltip.js';
-import { openDeconflictPanel, closeDeconflictPanel, refreshDeconflictPanel, updateDeconflictBadge } from './deconflict.js';
+import { toggleDeconflictPanel, closeDeconflictPanel, refreshDeconflictPanel, updateDeconflictBadge } from './deconflict.js';
 import { renderMonth } from './views/month.js';
 import { renderGantt } from './views/gantt.js';
 import { renderList } from './views/list.js';
+import { renderTable } from './views/table.js';
 import {
   renderCalendarList, renderPersonList,
   renderPresets, loadPresets,
 } from './sidebar.js';
+
+let refreshInFlight = false;
 
 // ── Script loader (for gapi / gsi) ────────────────────────────────────────────
 function loadScript(src) {
@@ -27,13 +30,14 @@ function switchView(view, force = false) {
   if (view === state.view && !force) return;
   state.view = view;
 
-  hide('view-month'); hide('view-gantt'); hide('view-list');
+  hide('view-month'); hide('view-gantt'); hide('view-list'); hide('view-table');
   hide('gantt-groupby-section');
   el.viewBtns().forEach(b => b.classList.toggle('active', b.dataset.view === view));
 
   if (view === 'month') { show('view-month'); renderMonth(); }
   if (view === 'gantt') { show('view-gantt'); show('gantt-groupby-section'); renderGantt(); }
   if (view === 'list')  { show('view-list');  renderList(); }
+  if (view === 'table') { show('view-table'); renderTable(); }
 }
 
 function renderAll() {
@@ -41,6 +45,42 @@ function renderAll() {
   renderPersonList();
   renderPresets();
   switchView(state.view, true);
+  refreshDeconflictPanel();
+}
+
+// ── Calendar refresh ──────────────────────────────────────────────────────────
+async function refreshCalendarData({ showSpinner = false } = {}) {
+  if (refreshInFlight) return;
+  refreshInFlight = true;
+  updateRefreshBtn();
+  if (showSpinner) setLoading(true);
+
+  try {
+    if (state.auth.signedIn) await loadUserCalendars({ fetchNewEvents: false });
+    await loadAllEvents();
+    renderAll();
+    updateDeconflictBadge();
+  } catch (err) {
+    console.error('Calendar refresh failed:', err);
+  } finally {
+    if (showSpinner) setLoading(false);
+    refreshInFlight = false;
+    updateRefreshBtn();
+  }
+}
+
+function updateRefreshBtn() {
+  const btn = el.refreshBtn();
+  if (!btn) return;
+  btn.disabled = refreshInFlight;
+  btn.classList.toggle('refreshing', refreshInFlight);
+  btn.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 11-2.64-6.36"/>
+      <path d="M21 3v6h-6"/>
+    </svg>
+    ${refreshInFlight ? 'Refreshing' : 'Refresh'}
+  `;
 }
 
 // ── Calendar setup ────────────────────────────────────────────────────────────
@@ -51,11 +91,28 @@ function initCalendars() {
     enabled:  true,
     isPublic: true,
   }));
+  
+  state.calendars.push({
+    id: 'mock-project-calendar-b',
+    name: 'Sample Calendar B',
+    color: '#8b5cf6',
+    enabled: true,
+    isPublic: true,
+  });
+
+  state.calendars.push({
+    id: 'mock-project-calendar-a',
+    name: 'Sample Calendar A',
+    color: '#10b981',
+    enabled: true,
+    isPublic: true,
+  });
+
   state.filter.calendars = new Set();
   renderCalendarList();
 }
 
-async function loadUserCalendars() {
+async function loadUserCalendars({ fetchNewEvents = true } = {}) {
   try {
     const resp     = await gapi.client.calendar.calendarList.list({ minAccessRole: 'reader' });
     const existing = new Set(state.calendars.map(c => c.id));
@@ -73,9 +130,11 @@ async function loadUserCalendars() {
     }
 
     const newCals = state.calendars.filter(c => !existing.has(c.id));
-    for (const cal of newCals) {
-      const evs = await fetchCalendarEvents(cal);
-      state.events.push(...evs);
+    if (fetchNewEvents) {
+      for (const cal of newCals) {
+        const evs = await fetchCalendarEvents(cal);
+        state.events.push(...evs);
+      }
     }
 
     extractAttendees();
@@ -109,8 +168,7 @@ function setupTokenClient() {
       if (resp.error) return;
       state.auth.signedIn = true;
       updateAuthBtn();
-      await loadUserCalendars();
-      renderAll();
+      await refreshCalendarData({ showSpinner: true });
     },
   });
 }
@@ -153,8 +211,11 @@ function setupEventListeners() {
   });
 
   // Deconflict panel
-  document.getElementById('deconflict-btn')?.addEventListener('click', openDeconflictPanel);
+  document.getElementById('deconflict-btn')?.addEventListener('click', toggleDeconflictPanel);
   document.getElementById('deconflict-close')?.addEventListener('click', closeDeconflictPanel);
+
+  // Manual calendar refresh
+  el.refreshBtn()?.addEventListener('click', () => refreshCalendarData({ showSpinner: true }));
 
   // Clicking outside an event element or the pinned tooltip dismisses the pin
   document.addEventListener('click', e => {
@@ -217,6 +278,7 @@ async function init() {
   setLoading(false);
   renderAll();
   updateDeconflictBadge();
+  updateRefreshBtn();
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────

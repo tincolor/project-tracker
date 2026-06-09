@@ -1,10 +1,46 @@
 import { el } from './state.js';
 import { formatDateRange, shortDisplayName, escapeHtml } from './utils.js';
 
+function decodeHtmlEntities(value) {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
+function cleanDescription(description) {
+  const metadataKeys = new Set([
+    'type', 'project', 'group', 'group_id', 'groupid',
+    'subgroup', 'subgroup_id', 'subgroupid',
+    'subtask', 'subtask_id', 'subtaskid',
+    'workstream', 'milestone', 'milestone_for',
+    'status', 'owner',
+  ]);
+
+  return decodeHtmlEntities(description)
+    .replace(/\\n/g, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li)>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => {
+      if (!line || line.toLowerCase() === '#cdash') return false;
+      const match = line.match(/^([a-zA-Z_][\w-]*)\s*:\s*(.*)$/);
+      if (!match) return true;
+      const key = match[1].toLowerCase().replace(/-/g, '_');
+      const normalizedKey = key.replace(/^(n_|in_)/, '');
+      if (normalizedKey === 'notes') return Boolean(match[2].trim());
+      return !metadataKeys.has(normalizedKey);
+    })
+    .map(line => line.replace(/^notes\s*:\s*/i, ''))
+    .join('\n')
+    .trim();
+}
+
 function tooltipSections(ev) {
   const date        = ev.start ? formatDateRange(ev.start, ev.end, ev.isAllDay) : '';
   const assignees   = ev.attendees.map(a => shortDisplayName(a.displayName, a.email));
-  const description = ev.description ? escapeHtml(ev.description.trim()) : '';
+  const description = ev.description ? escapeHtml(cleanDescription(ev.description)) : '';
   return { date, assignees, description };
 }
 
@@ -16,15 +52,15 @@ function buildContent(ev) {
       <div class="tt-title">${escapeHtml(ev.title)}</div>
       ${date ? `<div class="tt-date">${date}</div>` : ''}
     </div>
-    ${assignees.length ? `
-      <div class="tt-section">
-        <div class="tt-section-label">Assignees</div>
-        ${assignees.map(n => `<div class="tt-assignee">${escapeHtml(n)}</div>`).join('')}
-      </div>` : ''}
     ${description ? `
       <div class="tt-section">
         <div class="tt-section-label">Details</div>
         <div class="tt-details">${description}</div>
+      </div>` : ''}
+    ${assignees.length ? `
+      <div class="tt-section">
+        <div class="tt-section-label">Assignees</div>
+        ${assignees.map(n => `<div class="tt-assignee">${escapeHtml(n)}</div>`).join('')}
       </div>` : ''}
   `;
 }
