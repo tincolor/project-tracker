@@ -92,7 +92,7 @@ function buildSummaryItem(id, groupId, events, label, color, options = {}) {
   };
 }
 
-function buildCompactSubtaskPlan(events, firstItemId = 0) {
+function buildCompactSubtaskPlan(events) {
   const subtaskMap = new Map();
 
   for (const ev of events) {
@@ -103,7 +103,6 @@ function buildCompactSubtaskPlan(events, firstItemId = 0) {
     subtaskMap.get(calendarScopedKey).push(ev);
   }
 
-  let itemId = firstItemId;
   const items = [];
   const eventMeta = new Map();
 
@@ -113,7 +112,7 @@ function buildCompactSubtaskPlan(events, firstItemId = 0) {
     if (groupEvents.length < 2) continue;
     const calendarId = groupEvents[0].calendarId;
     if (!calSubtaskGroups.has(calendarId)) calSubtaskGroups.set(calendarId, []);
-    calSubtaskGroups.get(calendarId).push(groupEvents);
+    calSubtaskGroups.get(calendarId).push({ key: calendarScopedKey, events: groupEvents });
   }
 
   let globalGroupIndex = 0;
@@ -121,15 +120,16 @@ function buildCompactSubtaskPlan(events, firstItemId = 0) {
   // Process subtasks calendar by calendar
   for (const [calendarId, groupsList] of calSubtaskGroups.entries()) {
     // Sort groups of this calendar by start time
-    const sortedGroups = groupsList.sort((a, b) => 
-      Math.min(...a.map(ev => ev.start)) - Math.min(...b.map(ev => ev.start))
+    const sortedGroups = groupsList.sort((a, b) =>
+      Math.min(...a.events.map(ev => ev.start)) - Math.min(...b.events.map(ev => ev.start))
     );
 
     // Compute range for each group
-    const groupRanges = sortedGroups.map(groupEvents => {
+    const groupRanges = sortedGroups.map(({ key, events: groupEvents }) => {
       const starts = groupEvents.map(ev => dayStart(ev.start).getTime());
       const ends = groupEvents.map(ev => eventEndForTimeline(ev).getTime());
       return {
+        key,
         events: groupEvents,
         start: Math.min(...starts),
         end: Math.max(...ends),
@@ -164,7 +164,7 @@ function buildCompactSubtaskPlan(events, firstItemId = 0) {
         globalGroupIndex++;
 
         items.push(buildSummaryItem(
-          `subtask-summary:${itemId++}`,
+          `subtask-summary:${range.key}`,
           calendarId,
           groupEvents,
           subtaskLabel(first),
@@ -185,7 +185,7 @@ function buildCompactSubtaskPlan(events, firstItemId = 0) {
     });
   }
 
-  return { items, eventMeta, nextItemId: itemId };
+  return { items, eventMeta };
 }
 
 function buildDayBackgroundItems() {
@@ -232,6 +232,33 @@ function emptyTimelineMessage() {
   return `No events found in ${calendarScope} for this time range.`;
 }
 
+// DataSet.update() merges properties and cannot delete them, so items whose
+// structural fields (group, subgroup, type, end) changed must be replaced wholesale.
+function syncItems(dataset, newItems) {
+  const incomingIds = new Set(newItems.map(it => String(it.id)));
+  const staleIds = dataset.getIds().filter(id => !incomingIds.has(String(id)));
+  if (staleIds.length > 0) dataset.remove(staleIds);
+
+  const toReplace = [];
+  const toUpsert  = [];
+  for (const it of newItems) {
+    const old = dataset.get(it.id);
+    const structuralChange = old && (
+      old.group !== it.group ||
+      (old.subgroup ?? null) !== (it.subgroup ?? null) ||
+      old.type !== it.type ||
+      String(old.end ?? '') !== String(it.end ?? '')
+    );
+    if (structuralChange) toReplace.push(it);
+    else toUpsert.push(it);
+  }
+  if (toReplace.length > 0) {
+    dataset.remove(toReplace.map(it => it.id));
+    dataset.add(toReplace);
+  }
+  if (toUpsert.length > 0) dataset.update(toUpsert);
+}
+
 // ── Timeline construction ─────────────────────────────────────────────────────
 function buildTimeline(groups, items) {
   const container = el.tlContainer();
@@ -250,17 +277,14 @@ function buildTimeline(groups, items) {
 
   const allItems = [...buildDayBackgroundItems(), ...items];
 
-  // Fast path — surgical DataSet updates (never clear(), which causes a blank intermediate state)
+  // Fast path — sync DataSets in place (never clear(), which causes a blank intermediate state)
   if (state.tlInstance && timelineGroupsData && timelineItemsData) {
     const keepGroupIds = new Set(groups.map(g => String(g.id)));
     const removeGroupIds = timelineGroupsData.getIds().filter(id => !keepGroupIds.has(String(id)));
     if (removeGroupIds.length > 0) timelineGroupsData.remove(removeGroupIds);
     timelineGroupsData.update(groups);
 
-    const keepItemIds = new Set(allItems.map(it => String(it.id)));
-    const removeItemIds = timelineItemsData.getIds().filter(id => !keepItemIds.has(String(id)));
-    if (removeItemIds.length > 0) timelineItemsData.remove(removeItemIds);
-    timelineItemsData.update(allItems);
+    syncItems(timelineItemsData, allItems);
     return;
   }
 
@@ -433,7 +457,7 @@ function renderGanttByCalendar(events) {
   const eventItems = events
     .map((ev, i) => {
       const meta = summaries.eventMeta.get(compactEventKey(ev));
-      return buildTimelineItem(summaries.nextItemId + i, ev, ev.calendarId, meta || {
+      return buildTimelineItem(`ev:${compactEventKey(ev)}`, ev, ev.calendarId, meta || {
         stackOrder: 100000 + i,
       });
     })
@@ -489,11 +513,10 @@ export function renderGantt() {
       content: `<span title="${email}">${shortDisplayName(name, email)}</span>`,
     }));
     const items = [];
-    let itemId = 0;
     for (const ev of events) {
       for (const a of ev.attendees) {
         if (!peopleInView.has(a.email)) continue;
-        const item = buildTimelineItem(itemId++, ev, a.email);
+        const item = buildTimelineItem(`ev:${a.email}::${compactEventKey(ev)}`, ev, a.email);
         if (item) items.push(item);
       }
     }
