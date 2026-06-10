@@ -175,8 +175,11 @@ export function extractAttendees() {
 }
 
 export function filteredEvents() {
+  // No calendars selected means nothing is visible — views and the deconflict
+  // panel must agree on this so acknowledgements only ever touch visible events
+  if (state.filter.calendars.size === 0) return [];
   return state.events.filter(ev => {
-    if (state.filter.calendars.size > 0 && !state.filter.calendars.has(ev.calendarId)) return false;
+    if (!state.filter.calendars.has(ev.calendarId)) return false;
     if (state.filter.attendees.size > 0) {
       const evEmails = new Set(ev.attendees.map(a => a.email));
       for (const sel of state.filter.attendees) {

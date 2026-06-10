@@ -225,11 +225,13 @@ function selectedPeopleLabel() {
 }
 
 function emptyTimelineMessage() {
+  if (state.filter.calendars.size === 0) {
+    return 'Select calendars in the sidebar (or pick a preset) to see events.';
+  }
   const people = selectedPeopleLabel();
-  const calendarScope = state.filter.calendars.size > 0 ? 'the selected calendars' : 'any loaded calendars';
-  if (people) return `No events found for ${escapeHtml(people)} in ${calendarScope} for this time range.`;
+  if (people) return `No events found for ${escapeHtml(people)} in the selected calendars for this time range.`;
 
-  return `No events found in ${calendarScope} for this time range.`;
+  return 'No events found in the selected calendars for this time range.';
 }
 
 // DataSet.update() merges properties and cannot delete them, so items whose
