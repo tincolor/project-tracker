@@ -449,12 +449,31 @@ body {
   padding: 1px 6px !important;
 }
 
-.vis-item.tl-milestone {
-  border-radius: 50% 0 50% 50% !important;
-  transform: translateX(-18px) rotate(-45deg);
-  width: 18px !important;
-  height: 24px !important;
-  overflow: hidden !important;
+/* Milestones: vis positions point items with an inline transform, so the outer
+   element stays an invisible anchor and the visible teardrop is drawn with
+   ::after — tip touching the day's right edge, body extending into the day. */
+.vis-item.vis-point.tl-milestone {
+  visibility: hidden;
+  width: 20px !important;
+  height: 20px !important;
+  border: none !important;
+}
+
+.vis-item.vis-point.tl-milestone::after {
+  content: '';
+  visibility: visible;
+  position: absolute;
+  left: -24px;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  background: inherit;
+  border-radius: 50% 0 50% 50%;
+  transform: rotate(45deg);
+}
+
+.vis-item.vis-dot.tl-milestone {
+  display: none !important;
 }
 
 .vis-item.tl-milestone .vis-item-content {
