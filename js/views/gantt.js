@@ -308,6 +308,9 @@ function buildTimeline(groups, items) {
     orientation:     'top',
     stack:           true,
     stackSubgroups:  true,
+    // No horizontal margin: events on adjacent days touch at midnight and must
+    // not be treated as colliding, or they stack onto different rows
+    margin:          { item: { horizontal: 0, vertical: 10 } },
     showCurrentTime: false,
     groupOrder:      'content',
     order:           (a, b) => (a._stackOrder ?? 0) - (b._stackOrder ?? 0),
