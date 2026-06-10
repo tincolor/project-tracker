@@ -441,10 +441,11 @@ function renderGanttByCalendar(events) {
     content: `<span style="color:${info.color};font-weight:500">${info.name}</span>`,
     subgroupStack: true,
     subgroupOrder: function(a, b) {
+      // 'ungrouped' sorts first so loose events sit above task-group tracks
       const getVal = (subg) => {
-        if (!subg) return 1000000;
+        if (!subg) return 999999;
         let val = typeof subg === 'string' ? subg : (subg.id || subg.subgroup || '');
-        if (!val) return 1000000;
+        if (val === 'ungrouped') return -1;
         if (val.startsWith('track-')) {
           return parseInt(val.split('-')[1], 10);
         }
@@ -454,11 +455,15 @@ function renderGanttByCalendar(events) {
     }
   }));
   const summaries = buildCompactSubtaskPlan(events);
-  const eventItems = events
+  // Loose events get their own subgroup above task groups (vis doesn't stack
+  // subgroup-less items when stackSubgroups is on); earlier events stack higher
+  const sortedEvents = events.slice().sort((a, b) => a.start - b.start);
+  const eventItems = sortedEvents
     .map((ev, i) => {
       const meta = summaries.eventMeta.get(compactEventKey(ev));
       return buildTimelineItem(`ev:${compactEventKey(ev)}`, ev, ev.calendarId, meta || {
-        stackOrder: 100000 + i,
+        subgroup: 'ungrouped',
+        stackOrder: -1000000 + i,
       });
     })
     .filter(Boolean);
