@@ -8,7 +8,7 @@ export const CONFIG = {
 
   // From Google Cloud Console → APIs & Services → Credentials
   CLIENT_ID: '45259990601-rhlges6s8uoj12pqv6tnn95dob22u0d4.apps.googleusercontent.com',
-  API_KEY:   'AIzaSyAfQNETTtGclfPpbTYDM_tvyFYHI7PFeKI',
+  API_KEY:   'AIzaSyCZiLu80R-2pA8N3B81xp9hJRtu9mnT42Y',
 
   // How far back/forward to load events (in months)
   MONTHS_PAST:   1,
